@@ -27,7 +27,7 @@ const MESES = [
 ];
 
 // ============================================================
-// DADOS EMBUTIDOS
+// DADOS EMBUTIDOS (60 posições = 2023..2027)
 // ============================================================
 const DADOS_EMBUTIDOS = {
 
@@ -695,7 +695,7 @@ function aplicarEdicoes() {
 // ============================================================
 function getPeriodos() {
   const salvo = loadJSON(STORAGE_KEY_PERIODOS, null);
-  if (Array.isArray(salvo) && salvo.length > 0) return salvo;
+  if (Array.isArray(salvo)) return salvo;
   return [...PERIODOS_PADRAO];
 }
 function setPeriodos(arr) {
@@ -780,6 +780,18 @@ function renomearBanco(a, n) {
   return { ok: true };
 }
 function restaurarBancosPadrao() { bancos = [...BANCOS_PADRAO]; salvarBancos(); }
+
+function moverBanco(nome, direcao) {
+  const idx = bancos.indexOf(nome);
+  if (idx === -1) return { ok: false, msg: "Banco não encontrado." };
+  const novoIdx = idx + direcao;
+  if (novoIdx < 0 || novoIdx >= bancos.length) {
+    return { ok: false, msg: "Não é possível mover mais nessa direção." };
+  }
+  [bancos[idx], bancos[novoIdx]] = [bancos[novoIdx], bancos[idx]];
+  salvarBancos();
+  return { ok: true };
+}
 
 // ============================================================
 // CATEGORIAS
@@ -980,6 +992,7 @@ function formatarValor(v) {
 function renderizarListaBancos() {
   const ul = document.getElementById("listaBancos");
   ul.innerHTML = "";
+
   if (bancos.length === 0) {
     const li = document.createElement("li");
     li.style.color = "var(--fg-muted)";
@@ -988,11 +1001,45 @@ function renderizarListaBancos() {
     ul.appendChild(li);
     return;
   }
-  bancos.forEach(nome => {
+
+  bancos.forEach((nome, index) => {
     const li = document.createElement("li");
+
     const span = document.createElement("span");
     span.className = "nome-banco";
     span.textContent = nome;
+
+    const btnUp = document.createElement("button");
+    btnUp.type = "button";
+    btnUp.className = "btn-acao btn-mover-up";
+    btnUp.textContent = "⬆️";
+    btnUp.title = "Mover para cima";
+    btnUp.disabled = index === 0;
+    btnUp.addEventListener("click", () => {
+      const r = moverBanco(nome, -1);
+      if (!r.ok) { alert(r.msg); return; }
+      renderizarListaBancos();
+      atualizarSelectBancos();
+      atualizarSelectCategorias();
+      renderizarTabela();
+      atualizarGrafico();
+    });
+
+    const btnDown = document.createElement("button");
+    btnDown.type = "button";
+    btnDown.className = "btn-acao btn-mover-down";
+    btnDown.textContent = "⬇️";
+    btnDown.title = "Mover para baixo";
+    btnDown.disabled = index === bancos.length - 1;
+    btnDown.addEventListener("click", () => {
+      const r = moverBanco(nome, 1);
+      if (!r.ok) { alert(r.msg); return; }
+      renderizarListaBancos();
+      atualizarSelectBancos();
+      atualizarSelectCategorias();
+      renderizarTabela();
+      atualizarGrafico();
+    });
 
     const btnA = document.createElement("button");
     btnA.type = "button";
@@ -1018,6 +1065,8 @@ function renderizarListaBancos() {
     });
 
     li.appendChild(span);
+    li.appendChild(btnUp);
+    li.appendChild(btnDown);
     li.appendChild(btnA);
     li.appendChild(btnE);
     ul.appendChild(li);
@@ -1377,7 +1426,7 @@ function atualizarSelectCategorias() {
   selCat.innerHTML = '<option value="">Todas</option>';
   const grupos = agruparCategorias(cats.map(c => c.exibida));
   for (const g of grupos) {
-    if (bancoSel && g.categorias.length === 0) continue;
+    if (bancoSel && g.banco !== bancoSel && g.categorias.length === 0) continue;
     const og = document.createElement("optgroup");
     const suf = g.categorias.length === 0 ? " (vazio)" : "";
     og.label = g.banco ? `🏦 ${g.banco}${suf}` : "📌 Outros";
@@ -1564,7 +1613,7 @@ function renderizarTabela() {
 }
 
 // ============================================================
-// GRÁFICO
+// GRÁFICO — obterDadosGrafico ROBUSTO
 // ============================================================
 function obterDadosGrafico() {
   const filtroCat = document.getElementById("filtroCategoria").value;
@@ -1585,6 +1634,7 @@ function obterDadosGrafico() {
   if (busca) partes.push(`🔎 "${busca}"`);
   const sufixo = partes.length ? ` — ${partes.join(" • ")}` : "";
 
+  // 1) Categoria específica
   if (filtroCat && dados.matriz[filtroCat]) {
     return {
       titulo: `📈 ${filtroCat}${sufixo}`,
@@ -1593,6 +1643,7 @@ function obterDadosGrafico() {
     };
   }
 
+  // 2) Banco selecionado → soma
   if (filtroBanco) {
     const cats = dados.categorias.filter(c => categoriaPertenceAoBanco(c, filtroBanco));
     if (cats.length > 0) {
@@ -1612,20 +1663,44 @@ function obterDadosGrafico() {
     }
   }
 
-  if (dados.matriz["TOTAL DO PATRIMONIO"]) {
+  // 3) Busca flexível por "TOTAL" + "PATRIM"
+  const chaveTotal = dados.categorias.find(c => {
+    const cU = c.toUpperCase();
+    return cU.includes("TOTAL") && (cU.includes("PATRIM") || cU.includes("PATRIMÔNIO"));
+  });
+  if (chaveTotal && dados.matriz[chaveTotal]) {
     return {
-      titulo: `📈 Total do Patrimônio${sufixo}`,
-      valores: periodosVisiveis.map(p => dados.matriz["TOTAL DO PATRIMONIO"][p]),
+      titulo: `📈 ${chaveTotal}${sufixo}`,
+      valores: periodosVisiveis.map(p => dados.matriz[chaveTotal][p]),
       periodos: periodosVisiveis,
     };
   }
 
+  // 4) Fallback: primeira categoria com dados
+  for (const cat of dados.categorias) {
+    const linha = periodosVisiveis.map(p => dados.matriz[cat] ? dados.matriz[cat][p] : null);
+    if (linha.some(v => v !== null && v !== undefined)) {
+      return {
+        titulo: `📈 ${cat}${sufixo}`,
+        valores: linha,
+        periodos: periodosVisiveis,
+      };
+    }
+  }
+
+  // 5) Nada encontrado
   return { titulo: `📈 Evolução${sufixo}`, valores: [], periodos: [] };
 }
+
 function atualizarGrafico() {
-  if (typeof Chart === "undefined") return;
+  if (typeof Chart === "undefined") {
+    setTimeout(atualizarGrafico, 200);
+    return;
+  }
+
   const ctx = document.getElementById("graficoPatrimonio");
   if (!ctx) return;
+
   const { titulo, valores, periodos } = obterDadosGrafico();
   document.getElementById("graficoTitulo").textContent = titulo;
 
@@ -1633,54 +1708,89 @@ function atualizarGrafico() {
     const [m, a] = p.split(", ");
     return `${m.slice(0, 3)}/${a.slice(2)}`;
   });
+
   const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const textColor = isDark ? "#cbd5e1" : "#334155";
   const gridColor = isDark ? "rgba(148,163,184,0.15)" : "rgba(100,116,139,0.2)";
   const accent = isDark ? "#38bdf8" : "#0284c7";
   const accentBg = isDark ? "rgba(56,189,248,0.15)" : "rgba(2,132,199,0.12)";
 
-  if (graficoInstance) graficoInstance.destroy();
-  graficoInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Valor (R$)",
-        data: valores,
-        borderColor: accent,
-        backgroundColor: accentBg,
-        borderWidth: 2, tension: 0.25,
-        pointRadius: 3, pointHoverRadius: 6,
-        pointBackgroundColor: accent,
-        fill: true, spanGaps: true,
-      }],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: isDark ? "#0b1220" : "#ffffff",
-          titleColor: isDark ? "#e2e8f0" : "#0f172a",
-          bodyColor: isDark ? "#cbd5e1" : "#334155",
-          borderColor: isDark ? "#334155" : "#cbd5e1",
-          borderWidth: 1, padding: 10,
-          callbacks: { label: (c) => c.parsed.y === null ? "—" : fmt.format(c.parsed.y) },
+  if (graficoInstance) {
+    try { graficoInstance.destroy(); } catch (e) {}
+    graficoInstance = null;
+  }
+
+  if (!valores || valores.length === 0) {
+    const parent = ctx.parentElement;
+    if (parent && !parent.querySelector(".grafico-vazio")) {
+      const aviso = document.createElement("div");
+      aviso.className = "grafico-vazio";
+      aviso.textContent = "Sem dados para exibir no gráfico.";
+      aviso.style.cssText =
+        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--fg-muted);font-size:0.9rem;";
+      parent.appendChild(aviso);
+    }
+    return;
+  }
+
+  const aviso = ctx.parentElement?.querySelector(".grafico-vazio");
+  if (aviso) aviso.remove();
+
+  try {
+    graficoInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Valor (R$)",
+          data: valores,
+          borderColor: accent,
+          backgroundColor: accentBg,
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: accent,
+          fill: true,
+          spanGaps: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? "#0b1220" : "#ffffff",
+            titleColor: isDark ? "#e2e8f0" : "#0f172a",
+            bodyColor: isDark ? "#cbd5e1" : "#334155",
+            borderColor: isDark ? "#334155" : "#cbd5e1",
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: (c) => c.parsed.y === null ? "—" : fmt.format(c.parsed.y),
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } },
+            grid: { color: gridColor },
+          },
+          y: {
+            ticks: {
+              color: textColor,
+              callback: v => "R$ " + (v / 1000).toFixed(0) + "k",
+            },
+            grid: { color: gridColor },
+          },
         },
       },
-      scales: {
-        x: {
-          ticks: { color: textColor, maxRotation: 45, minRotation: 45, font: { size: 10 } },
-          grid: { color: gridColor },
-        },
-        y: {
-          ticks: { color: textColor, callback: v => "R$ " + (v / 1000).toFixed(0) + "k" },
-          grid: { color: gridColor },
-        },
-      },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("❌ Erro ao criar o gráfico:", err);
+  }
 }
 
 // ============================================================
@@ -1802,6 +1912,11 @@ function importarEdicoesJSON(file) {
 // INICIALIZAÇÃO
 // ============================================================
 function iniciar() {
+  if (typeof Chart === "undefined") {
+    setTimeout(iniciar, 100);
+    return;
+  }
+
   PERIODOS = getPeriodos();
   dados.periodos = [...PERIODOS];
 
@@ -1825,7 +1940,12 @@ function iniciar() {
   atualizarInfoPeriodos();
 
   renderizarTabela();
-  atualizarGrafico();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      atualizarGrafico();
+    });
+  });
 
   const painelB = document.getElementById("painelBancos");
   const painelC = document.getElementById("painelCategorias");
@@ -1836,7 +1956,6 @@ function iniciar() {
     painelP.hidden = true; painelV.hidden = true;
   };
 
-  // ============ MENU BANCOS ============
   document.getElementById("btnMenuBancos").addEventListener("click", (e) => {
     e.stopPropagation();
     const abrir = painelB.hidden;
@@ -1878,7 +1997,6 @@ function iniciar() {
     }
   });
 
-  // ============ MENU CATEGORIAS ============
   document.getElementById("btnMenuCategorias").addEventListener("click", (e) => {
     e.stopPropagation();
     const abrir = painelC.hidden;
@@ -1938,7 +2056,7 @@ function iniciar() {
   document.getElementById("btnFecharModalMover").addEventListener("click", fecharModalMover);
   document.getElementById("btnCancelarMover").addEventListener("click", fecharModalMover);
   document.getElementById("btnConfirmarMover").addEventListener("click", confirmarMover);
-  document.getElementById("modalMover").addEventListener("click", (e) => {
+  document.getElementById("modalMover").addEventListener("mousedown", (e) => {
     if (e.target.id === "modalMover") fecharModalMover();
   });
   document.addEventListener("keydown", (e) => {
@@ -1947,7 +2065,6 @@ function iniciar() {
     }
   });
 
-  // ============ MENU PERÍODOS ============
   document.getElementById("btnMenuPeriodos").addEventListener("click", (e) => {
     e.stopPropagation();
     const abrir = painelP.hidden;
@@ -2020,7 +2137,6 @@ function iniciar() {
     }
   });
 
-  // ============ MENU VALORES ============
   document.getElementById("btnMenuValores").addEventListener("click", (e) => {
     e.stopPropagation();
     const abrir = painelV.hidden;
@@ -2056,7 +2172,6 @@ function iniciar() {
     if (!e.target.closest(".menu-bancos")) fecharTodos();
   });
 
-  // ============ FILTROS ============
   document.getElementById("filtroBanco").addEventListener("change", () => {
     atualizarSelectCategorias();
     renderizarTabela();
@@ -2097,7 +2212,6 @@ function iniciar() {
   document.getElementById("btnLimparFiltros").addEventListener("click", limparFiltros);
   document.getElementById("btnCSV").addEventListener("click", exportarCSV);
 
-  // ============ EDIÇÃO DE CÉLULA ============
   document.getElementById("tbody").addEventListener("click", (e) => {
     const td = e.target.closest("td.num");
     if (!td) return;
@@ -2106,12 +2220,14 @@ function iniciar() {
     iniciarEdicaoCelula(td);
   });
 
-  // ============ TOGGLE GRÁFICO ============
   document.getElementById("btnToggleGrafico").addEventListener("click", () => {
     const cont = document.getElementById("graficoContainer");
     const btn = document.getElementById("btnToggleGrafico");
     cont.classList.toggle("oculto");
     btn.textContent = cont.classList.contains("oculto") ? "▲" : "▼";
+    if (!cont.classList.contains("oculto")) {
+      requestAnimationFrame(() => atualizarGrafico());
+    }
   });
 
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {

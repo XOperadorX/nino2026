@@ -47,18 +47,19 @@ Planilha de controle de patrimônio, investimentos e recebimentos mensais, com d
 - Se a categoria não pertence a nenhum banco, o filtro de banco é **limpo**.
 
 ### 🏦 Menu Bancos
-- ➕ **Cadastrar novo banco** (aparece **imediatamente** na tabela como grupo vazio `(vazio)` + linha explicativa).
+- ➕ **Cadastrar novo banco** (aparece **imediatamente** na tabela como grupo vazio `(vazio)`).
 - ✏️ **Alterar** (inline).
 - 🗑️ **Excluir** (com confirmação).
+- ⬆️ **Mover para cima** / ⬇️ **Mover para baixo** (reordenar a lista).
 - ↺ **Restaurar padrão**.
 - Salvo em `localStorage`.
 
 ### 📂 Menu Categorias
-- ➕ **Cadastrar nova categoria** (aparece **imediatamente** na tabela dentro do grupo do banco dela, ou em `📌 Outros`).
+- ➕ **Cadastrar nova categoria** (aparece **imediatamente** na tabela dentro do grupo dela).
 - ✏️ **Alterar** (renomeia — alias visual, mantém os valores originais).
 - 🗑️ **Excluir** (oculta da tabela).
 - 🔀 **Mover** categoria para outro banco (individual ou em lote):
-  - Ao mover, o prefixo do banco é **ajustado automaticamente** (ex.: `RICO - PROVENTOS` → `INTER - PROVENTOS`).
+  - Ao mover, o prefixo do banco é **ajustado automaticamente** (`RICO - PROVENTOS` → `INTER - PROVENTOS`).
   - Mover para **"— Sem banco (📌 Outros) —"** remove o prefixo do banco.
   - **Edições de células são preservadas** ao mover.
 - ☑️ **Selecionar todas** + botão **🔀 Mover N selecionadas**.
@@ -105,6 +106,25 @@ Planilha de controle de patrimônio, investimentos e recebimentos mensais, com d
 
 ---
 
+## 🩹 Correções recentes (gráfico)
+
+O gráfico foi reforçado com 4 correções para garantir renderização consistente em qualquer navegador:
+
+1. **Aguardar o Chart.js carregar** antes de iniciar (retry a cada 100ms).
+2. **`requestAnimationFrame` duplo** antes da 1ª renderização, garantindo que o canvas tenha dimensões reais.
+3. **`atualizarGrafico()` resiliente**:
+   - Verifica se `Chart` está definido (retry em 200ms se não).
+   - Destrói a instância anterior antes de recriar.
+   - Mostra mensagem "Sem dados para exibir no gráfico." se não houver valores.
+   - Envolve a criação do gráfico em `try/catch` e loga erros no console.
+4. **CSS reforçado** no `.grafico-container`:
+   - `width: 100%`, `min-height: 220px`.
+   - Regra explícita para o `<canvas>` ocupar 100% de largura/altura.
+
+Além disso, ao reexibir o gráfico pelo botão **▼/▲**, ele é redesenhado via `requestAnimationFrame`.
+
+---
+
 ## 💾 Armazenamento
 
 Tudo é salvo no **`localStorage`** do navegador:
@@ -137,6 +157,11 @@ Tudo é salvo no **`localStorage`** do navegador:
 ### Cadastrar banco (feedback imediato)
 1. **🏦 Bancos ▾** → **➕ Cadastrar novo banco** → `NUBANK` → Enter.
 2. Feche o menu → veja o grupo `🏦 NUBANK (vazio)` na tabela.
+
+### Reordenar banco
+1. **🏦 Bancos ▾** → clique em **⬇️** ao lado de `BANCO DO BRASIL`.
+2. Feche o menu → a ordem dos grupos na tabela mudou.
+3. Recarregue a página → a ordem persiste.
 
 ### Cadastrar categoria (feedback imediato)
 1. **📂 Categorias ▾** → **➕ Cadastrar nova categoria** → `NUBANK - CARTÃO` → Enter.
