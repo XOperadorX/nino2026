@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planilha Financeira — nino2026</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <header class="cabecalho">
+    <h1>📊 Planilha Financeira — nino2026</h1>
+
+    <div class="menus-wrapper">
+      <!-- MENU BANCOS -->
+      <nav class="menu-bancos">
+        <button type="button" id="btnMenuBancos" class="btn-menu">
+          🏦 Bancos ▾
+        </button>
+
+        <div id="painelBancos" class="painel-bancos" hidden>
+          <div class="painel-header">
+            <strong>Gerenciar Bancos</strong>
+            <button type="button" id="btnFecharBancos" class="btn-fechar" title="Fechar">✕</button>
+          </div>
+
+          <div class="painel-acoes">
+            <button type="button" id="btnCadastrarBanco" class="btn-primario">
+              ➕ Cadastrar novo banco
+            </button>
+          </div>
+
+          <form id="formBanco" class="form-banco" hidden>
+            <input type="text" id="inputNovoBanco" placeholder="Nome do banco..." autocomplete="off">
+            <button type="submit" class="btn-add">✔ Salvar</button>
+            <button type="button" id="btnCancelarCadastro" class="btn-cancelar">✖</button>
+          </form>
+
+          <ul id="listaBancos" class="lista-bancos"></ul>
+
+          <div class="painel-footer">
+            <small id="contadorBancos">0 bancos cadastrados</small>
+            <button type="button" id="btnRestaurarBancos" class="btn-restaurar">
+              ↺ Restaurar padrão
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- MENU CATEGORIAS -->
+      <nav class="menu-bancos">
+        <button type="button" id="btnMenuCategorias" class="btn-menu">
+          📂 Categorias ▾
+        </button>
+
+        <div id="painelCategorias" class="painel-bancos" hidden>
+          <div class="painel-header">
+            <strong>Gerenciar Categorias</strong>
+            <button type="button" id="btnFecharCategorias" class="btn-fechar" title="Fechar">✕</button>
+          </div>
+
+          <div class="painel-acoes">
+            <button type="button" id="btnCadastrarCategoria" class="btn-primario">
+              ➕ Cadastrar nova categoria
+            </button>
+          </div>
+
+          <form id="formCategoria" class="form-banco" hidden>
+            <input type="text" id="inputNovaCategoria" placeholder="Nome da categoria..." autocomplete="off">
+            <button type="submit" class="btn-add">✔ Salvar</button>
+            <button type="button" id="btnCancelarCategoria" class="btn-cancelar">✖</button>
+          </form>
+
+          <div id="barraAcoesCategorias" class="barra-acoes-categorias">
+            <label class="check-todas">
+              <input type="checkbox" id="checkTodasCategorias">
+              <span>Selecionar todas</span>
+            </label>
+            <button type="button" id="btnMoverSelecionadas" class="btn-secundario" disabled>
+              🔀 Mover selecionadas
+            </button>
+          </div>
+
+          <ul id="listaCategorias" class="lista-bancos"></ul>
+
+          <div class="painel-footer">
+            <small id="contadorCategorias">0 categorias</small>
+            <button type="button" id="btnRestaurarCategorias" class="btn-restaurar">
+              ↺ Restaurar padrão
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- MENU PERÍODOS -->
+      <nav class="menu-bancos">
+        <button type="button" id="btnMenuPeriodos" class="btn-menu">
+          📅 Períodos ▾
+        </button>
+
+        <div id="painelPeriodos" class="painel-bancos" hidden>
+          <div class="painel-header">
+            <strong>Gerenciar Períodos</strong>
+            <button type="button" id="btnFecharPeriodos" class="btn-fechar" title="Fechar">✕</button>
+          </div>
+
+          <p class="info-valores" id="infoPeriodos">Carregando...</p>
+
+          <div class="painel-acoes-grid">
+            <button type="button" id="btnAddAno" class="btn-primario">➕ Adicionar ano</button>
+            <button type="button" id="btnAddMes" class="btn-primario">➕ Adicionar mês</button>
+          </div>
+
+          <form id="formAddAno" class="form-banco" hidden>
+            <input type="number" id="inputNovoAno" placeholder="Ex.: 2028" min="1900" max="2999" autocomplete="off">
+            <button type="submit" class="btn-add">✔</button>
+            <button type="button" id="btnCancelarAddAno" class="btn-cancelar">✖</button>
+          </form>
+
+          <form id="formAddMes" class="form-banco" hidden>
+            <select id="selectNovoMes">
+              <option value="janeiro">janeiro</option>
+              <option value="fevereiro">fevereiro</option>
+              <option value="março">março</option>
+              <option value="abril">abril</option>
+              <option value="maio">maio</option>
+              <option value="junho">junho</option>
+              <option value="julho">julho</option>
+              <option value="agosto">agosto</option>
+              <option value="setembro">setembro</option>
+              <option value="outubro">outubro</option>
+              <option value="novembro">novembro</option>
+              <option value="dezembro">dezembro</option>
+            </select>
+            <input type="number" id="inputNovoAnoMes" placeholder="Ano" min="1900" max="2999" autocomplete="off">
+            <button type="submit" class="btn-add">✔</button>
+            <button type="button" id="btnCancelarAddMes" class="btn-cancelar">✖</button>
+          </form>
+
+          <ul id="listaPeriodos" class="lista-bancos"></ul>
+
+          <div class="painel-footer">
+            <small id="contadorPeriodos">0 períodos</small>
+            <button type="button" id="btnRestaurarPeriodos" class="btn-restaurar">
+              ↺ Restaurar padrão
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <!-- MENU VALORES -->
+      <nav class="menu-bancos">
+        <button type="button" id="btnMenuValores" class="btn-menu">
+          💾 Valores ▾
+        </button>
+
+        <div id="painelValores" class="painel-bancos" hidden>
+          <div class="painel-header">
+            <strong>Gerenciar Valores Editados</strong>
+            <button type="button" id="btnFecharValores" class="btn-fechar" title="Fechar">✕</button>
+          </div>
+
+          <p class="info-valores" id="infoValoresEditados">Nenhuma célula editada.</p>
+
+          <div class="painel-acoes">
+            <button type="button" id="btnRestaurarValores" class="btn-primario btn-perigo">
+              ↺ Restaurar todos os valores originais
+            </button>
+          </div>
+
+          <div class="painel-acoes-grid">
+            <button type="button" id="btnExportarEdicoes" class="btn-secundario">⬇️ Exportar edições (JSON)</button>
+            <button type="button" id="btnImportarEdicoes" class="btn-secundario">⬆️ Importar edições (JSON)</button>
+          </div>
+
+          <input type="file" id="inputImportarEdicoes" accept=".json" hidden>
+
+          <p class="info-ajuda">
+            💡 <strong>Dica:</strong> clique em qualquer célula da tabela para editar o valor.
+          </p>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- GRÁFICO -->
+    <section class="grafico-wrapper">
+      <div class="grafico-header">
+        <h2 id="graficoTitulo">📈 Evolução</h2>
+        <button type="button" id="btnToggleGrafico" class="btn-toggle-grafico" title="Mostrar/ocultar gráfico">▼</button>
+      </div>
+      <div id="graficoContainer" class="grafico-container">
+        <canvas id="graficoPatrimonio"></canvas>
+      </div>
+    </section>
+
+    <!-- CONTROLES -->
+    <section class="controles">
+      <label>
+        Banco
+        <select id="filtroBanco"><option value="">Todos</option></select>
+      </label>
+
+      <label>
+        Categoria
+        <select id="filtroCategoria"><option value="">Todas</option></select>
+      </label>
+
+      <label>
+        Ano
+        <select id="filtroAno"><option value="">Todos</option></select>
+      </label>
+
+      <label>
+        Mês
+        <select id="filtroMes"><option value="">Todos</option></select>
+      </label>
+
+      <label>
+        Período específico
+        <select id="filtroPeriodo"><option value="">Todos</option></select>
+      </label>
+
+      <label>
+        Buscar
+        <input id="busca" type="text" placeholder="Ex.: BANCO, RICO, 2024...">
+      </label>
+
+      <label>
+        Mostrar
+        <select id="filtroTipo">
+          <option value="todos">Todos os valores</option>
+          <option value="positivos">Apenas positivos</option>
+          <option value="negativos">Apenas negativos</option>
+          <option value="naozero">Ignorar zeros</option>
+        </select>
+      </label>
+
+      <button id="btnLimparFiltros" type="button" class="btn-limpar">🧹 Limpar</button>
+      <button id="btnCSV" type="button">⬇️ Exportar CSV</button>
+    </section>
+
+    <!-- CARDS -->
+    <section class="resumo">
+      <div class="card">
+        <div class="titulo">Categorias</div>
+        <div class="valor" id="totalCategorias">0</div>
+      </div>
+      <div class="card">
+        <div class="titulo">Períodos</div>
+        <div class="valor" id="totalPeriodos">0</div>
+      </div>
+      <div class="card">
+        <div class="titulo">Células exibidas</div>
+        <div class="valor" id="totalCelulas">0</div>
+      </div>
+      <div class="card">
+        <div class="titulo">Soma (filtro atual)</div>
+        <div class="valor" id="somaTotal">R$ 0,00</div>
+      </div>
+      <div class="card">
+        <div class="titulo">Maior valor</div>
+        <div class="valor verde" id="maiorValor">R$ 0,00</div>
+      </div>
+      <div class="card">
+        <div class="titulo">Menor valor</div>
+        <div class="valor vermelho" id="menorValor">R$ 0,00</div>
+      </div>
+    </section>
+
+    <!-- TABELA -->
+    <section class="tabela-wrapper">
+      <table id="tabela">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+
+    <p class="info" id="infoRodape"></p>
+  </main>
+
+  <!-- MODAL MOVER CATEGORIA -->
+  <div id="modalMover" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <strong>Mover categoria(s)</strong>
+        <button type="button" id="btnFecharModalMover" class="btn-fechar" title="Fechar">✕</button>
+      </div>
+
+      <p class="info-valores" id="infoModalMover">Escolha o banco de destino.</p>
+
+      <label class="modal-campo">
+        Banco de destino
+        <select id="selectBancoDestino">
+          <option value="">— Sem banco (📌 Outros) —</option>
+        </select>
+      </label>
+
+      <div class="modal-acoes">
+        <button type="button" id="btnCancelarMover" class="btn-cancelar">✖ Cancelar</button>
+        <button type="button" id="btnConfirmarMover" class="btn-add">✔ Mover</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

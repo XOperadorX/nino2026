@@ -1,0 +1,5 @@
+📂 nino2026/
+ ├── 📄 index.html
+ ├── 🎨 style.css
+ ├── 📄 README.md
+ └── 🐍 importar_dados.py   (opcional)
